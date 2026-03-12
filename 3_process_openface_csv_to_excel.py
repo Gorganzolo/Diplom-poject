@@ -6,6 +6,8 @@ import re
 from pathlib import Path
 from typing import Iterable
 
+ALL_RESPONDENTS_OPTION = "[Все респонденты]"
+
 try:
     import tkinter as tk
     from tkinter import ttk
@@ -269,21 +271,31 @@ def select_csv_files(
     respondent_files = sorted(mode_root.glob("*.csv"))
 
     if respondent_name:
+        if respondent_name.lower() in {"all", "*", "все"}:
+            return sorted(mode_root.rglob("*.csv")), None
+
         target_dir = mode_root / respondent_name
         if target_dir.is_dir():
             return sorted(target_dir.rglob("*.csv")), respondent_name
+
         matched = [p for p in respondent_files if respondent_name.lower() in p.stem.lower()]
         return matched, respondent_name
 
     options = [d.name for d in respondent_dirs]
     if options:
-        picked = prompt_choice("Выберите респондента:", options, use_gui=use_gui)
+        picked = prompt_choice("Выберите респондента:", [ALL_RESPONDENTS_OPTION] + options, use_gui=use_gui)
+        if picked == ALL_RESPONDENTS_OPTION:
+            return sorted(mode_root.rglob("*.csv")), None
         return sorted((mode_root / picked).rglob("*.csv")), picked
 
     names = sorted({p.stem.split("_")[0] for p in respondent_files})
     if not names:
         return [], None
-    picked = prompt_choice("Выберите респондента:", names, use_gui=use_gui)
+
+    picked = prompt_choice("Выберите респондента:", [ALL_RESPONDENTS_OPTION] + names, use_gui=use_gui)
+    if picked == ALL_RESPONDENTS_OPTION:
+        return sorted(mode_root.rglob("*.csv")), None
+
     selected = [p for p in respondent_files if p.stem.lower().startswith(picked.lower())]
     return selected, picked
 
