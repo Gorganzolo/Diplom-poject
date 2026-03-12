@@ -84,7 +84,12 @@ class CameraRecorder:
                 self.writer.write(latest_frame)
                 frames_written += 1
 
-            time.sleep(0.001)
+            next_frame_time += frame_interval
+            sleep_for = next_frame_time - time.perf_counter()
+            if sleep_for > 0:
+                time.sleep(sleep_for)
+            else:
+                next_frame_time = time.perf_counter()
 
     def start(self) -> None:
         import cv2
