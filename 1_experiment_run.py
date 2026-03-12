@@ -62,18 +62,27 @@ class CameraRecorder:
         assert self.capture is not None
         assert self.writer is not None
 
-        frame_interval = 1.0 / CAMERA_FPS
-        next_frame_time = time.perf_counter()
+        cv2 = self.cv2
+        latest_frame = None
+        start_time = time.perf_counter()
+        frames_written = 0
 
         while not self._stop_event.is_set():
             ok, frame = self.capture.read()
-            if not ok:
-                time.sleep(0.005)
+            if ok:
+                if frame.shape[1] != CAMERA_WIDTH or frame.shape[0] != CAMERA_HEIGHT:
+                    latest_frame = cv2.resize(frame, (CAMERA_WIDTH, CAMERA_HEIGHT), interpolation=cv2.INTER_AREA)
+                else:
+                    latest_frame = frame
+
+            if latest_frame is None:
+                time.sleep(0.002)
                 continue
 
-            cv2 = self.cv2
-            resized = cv2.resize(frame, (CAMERA_WIDTH, CAMERA_HEIGHT), interpolation=cv2.INTER_AREA)
-            self.writer.write(resized)
+            now = time.perf_counter()
+            while now >= start_time + (frames_written + 1) / CAMERA_FPS:
+                self.writer.write(latest_frame)
+                frames_written += 1
 
             next_frame_time += frame_interval
             sleep_for = next_frame_time - time.perf_counter()
@@ -223,10 +232,12 @@ class ExperimentWindow(QMainWindow):
         QTimer.singleShot(0, self._start_experiment_flow)
 
     def _start_experiment_flow(self) -> None:
-        # Сначала запускаем таймер и показываем первый кадр отсчёта,
-        # затем в этот же момент стартуем запись.
+        # Сначала сразу показываем таймер (чтобы UI отрисовался без подлагивания),
+        # затем запускаем запись в том же событии цикла Qt.
         self._start_countdown("Эксперимент начнётся через", 5, self._play_current_stimulus)
+        QTimer.singleShot(0, self._start_recording)
 
+    def _start_recording(self) -> None:
         try:
             self.recorder.start()
         except Exception as exc:
