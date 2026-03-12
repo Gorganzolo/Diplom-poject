@@ -24,6 +24,21 @@ pip install -r requirements.txt
 иначе IDE может показывать ошибки вида «модуль `cv2` не найден» или
 «не удаётся найти `PySide6`-классы».
 
+### Если видите ошибку про NumPy 1.x / NumPy 2.x
+
+Если появляется сообщение вида `A module that was compiled using NumPy 1.x cannot be run in NumPy 2...`,
+пересоздайте окружение и установите зависимости заново (в проекте уже зафиксирован `numpy<2`):
+
+```bash
+# в корне проекта
+rm -rf .venv
+python -m venv .venv
+# Windows (PowerShell): .venv\Scripts\Activate.ps1
+# Linux/macOS:
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
 ## 1) Запуск эксперимента
 
 1. Положите видео-стимулы в папку `stimuli`.

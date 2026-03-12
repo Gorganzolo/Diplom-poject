@@ -4,7 +4,6 @@ import threading
 import time
 from pathlib import Path
 
-import cv2
 from PySide6.QtCore import QTimer, Qt, QUrl
 from PySide6.QtGui import QFont
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
@@ -34,17 +33,19 @@ class CameraRecorder:
         self.output_file = output_file
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
-        self.capture: cv2.VideoCapture | None = None
-        self.writer: cv2.VideoWriter | None = None
+        self.capture = None
+        self.writer = None
+        self.cv2 = None
 
-    @staticmethod
-    def _set_capture_params(capture: cv2.VideoCapture) -> None:
+    def _set_capture_params(self, capture) -> None:
+        cv2 = self.cv2
         capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
         capture.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
         capture.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
         capture.set(cv2.CAP_PROP_FPS, CAMERA_FPS)
 
-    def _create_writer(self) -> cv2.VideoWriter:
+    def _create_writer(self):
+        cv2 = self.cv2
         frame_size = (CAMERA_WIDTH, CAMERA_HEIGHT)
         for code in ("mp4v", "avc1", "H264", "X264"):
             writer = cv2.VideoWriter(
@@ -70,6 +71,7 @@ class CameraRecorder:
                 time.sleep(0.005)
                 continue
 
+            cv2 = self.cv2
             resized = cv2.resize(frame, (CAMERA_WIDTH, CAMERA_HEIGHT), interpolation=cv2.INTER_AREA)
             self.writer.write(resized)
 
@@ -81,6 +83,9 @@ class CameraRecorder:
                 next_frame_time = time.perf_counter()
 
     def start(self) -> None:
+        import cv2
+
+        self.cv2 = cv2
         cap_api = cv2.CAP_DSHOW if sys.platform.startswith("win") else cv2.CAP_ANY
         self.capture = cv2.VideoCapture(0, cap_api)
 
@@ -218,14 +223,16 @@ class ExperimentWindow(QMainWindow):
         QTimer.singleShot(0, self._start_experiment_flow)
 
     def _start_experiment_flow(self) -> None:
+        # Сначала запускаем таймер и показываем первый кадр отсчёта,
+        # затем в этот же момент стартуем запись.
+        self._start_countdown("Эксперимент начнётся через", 5, self._play_current_stimulus)
+
         try:
             self.recorder.start()
         except Exception as exc:
+            self.countdown_timer.stop()
             QMessageBox.critical(self, "Ошибка", f"Не удалось запустить запись: {exc}")
             self.close()
-            return
-
-        self._start_countdown("Эксперимент начнётся через", 5, self._play_current_stimulus)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Escape:
