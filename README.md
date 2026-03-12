@@ -1,5 +1,14 @@
 # Программа эксперимента с видеостимулами
 
+## Структура файлов
+
+- `1_experiment_run.py` — запуск и проведение эксперимента (воспроизведение стимулов + запись лица участника).
+- `2_processing_open_face.py` — запуск OpenFace (`FeatureExtraction.exe`) для обработки видео актёров или респондентов.
+- `3_process_openface_csv_to_excel.py` — объединение CSV OpenFace в Excel с подсветкой AU-показателей.
+- `stimuli/` — папка с видео-стимулами.
+- `data/` — результаты по участникам (`<Фамилия>/attempt_XXX/face_record.mp4`).
+- `processed_openface/` — результаты обработки OpenFace (CSV-файлы).
+
 ## Установка зависимостей
 
 Рекомендуется использовать отдельное виртуальное окружение:
@@ -15,91 +24,98 @@ pip install -r requirements.txt
 иначе IDE может показывать ошибки вида «модуль `cv2` не найден» или
 «не удаётся найти `PySide6`-классы».
 
-## Подготовка
+## 1) Запуск эксперимента
 
 1. Положите видео-стимулы в папку `stimuli`.
-2. Запустите программу:
+2. Запустите:
 
 ```bash
-python experiment_app.py
+python 1_experiment_run.py
 ```
 
-## Что делает запись камеры
+### Что делает запись камеры
 
 - Пытается включить максимальное доступное разрешение (с приоритетом 4K → 1440p → 1080p и ниже).
 - Пытается использовать высокий FPS, затем замеряет фактическую частоту кадров; запись в файл синхронизируется по реальному времени, чтобы видео не ускорялось.
 - Запись стартует вместе с начальным 5-секундным отсчётом.
-- Сохраняет файл `face_record.mp4` (на Windows сначала `mp4v` для стабильности, затем H.264-варианты).
+- Сохраняет файл `face_record.mp4`.
 
-## Результаты
-
-Видео лица сохраняется в:
+### Куда сохраняются результаты
 
 `data/<Фамилия>/attempt_XXX/face_record.mp4`
 
-## Обработка через OpenFace (актеры и респонденты)
+## 2) Обработка видео через OpenFace
 
-Скрипт `scripts/process_actor.py` теперь делает только одно: запускает `FeatureExtraction.exe`
-для набора видео и сохраняет CSV OpenFace.
+Скрипт `2_processing_open_face.py` запускает `FeatureExtraction.exe` и сохраняет CSV OpenFace,
+сохраняя структуру подпапок.
 
 Поддерживаются два режима:
 
-- `--mode actor` — обрабатывает стимулы из `stimuli`;
-- `--mode respondent` — обрабатывает видео респондентов из `data`.
+- `--mode actor` — обработка стимулов из `stimuli`;
+- `--mode respondent` — обработка видео респондентов из `data`.
 
-Если `--mode` не указывать, откроется GUI-окно выбора режима (actor/respondent).
-Если GUI недоступен/отключён, скрипт выберет режим автоматически по папкам (`stimuli`/`data`) или возьмёт `actor` по умолчанию.
+Если `--mode` не указан:
 
-Результаты сохраняются в `processed_openface/<mode>/...` с сохранением структуры подпапок.
-Во время работы отображается прогресс-бар в консоли (для `actor` и `respondent`).
+- сначала предлагается GUI-выбор режима (если доступен),
+- иначе режим выбирается автоматически по наличию папок,
+- если определить нельзя — берётся `actor` по умолчанию.
 
-GUI используется только для выбора режима. Отключить GUI-выбор можно флагом `--no-gui`.
+Результаты сохраняются в `processed_openface/<mode>/...`.
 
-Примеры (Windows):
-
-```bash
-# Актёры
-python scripts/process_actor.py --mode actor ^
-  --openface-exe "%USERPROFILE%\Desktop\OpenFace_2.2.0_win_x64\FeatureExtraction.exe"
-
-# Респонденты
-python scripts/process_actor.py --mode respondent ^
-  --openface-exe "%USERPROFILE%\Desktop\OpenFace_2.2.0_win_x64\FeatureExtraction.exe"
-```
-
-Если `--openface-exe` не передан, скрипт попробует:
-- `OPENFACE_EXE`;
-- `FeatureExtraction.exe` в текущей папке;
-- `%USERPROFILE%\Desktop\OpenFace_2.2.0_win_x64\FeatureExtraction.exe`;
-- `%USERPROFILE%\Рабочий стол\OpenFace_2.2.0_win_x64\FeatureExtraction.exe`.
-
-Проверка без запуска OpenFace:
+### Примеры запуска
 
 ```bash
-python scripts/process_actor.py --mode actor --dry-run
-python scripts/process_actor.py --mode respondent --dry-run
+# Проверить список входных видео без запуска OpenFace
+python 2_processing_open_face.py --mode actor --dry-run
+python 2_processing_open_face.py --mode respondent --dry-run
+
+# Реальный запуск
+python 2_processing_open_face.py --mode actor --openface-exe "C:/OpenFace/FeatureExtraction.exe"
+python 2_processing_open_face.py --mode respondent --openface-exe "C:/OpenFace/FeatureExtraction.exe"
 ```
 
+### Поиск `FeatureExtraction.exe`
 
-## Экспорт CSV OpenFace в единый Excel
+Если `--openface-exe` не передан, скрипт проверяет:
 
-Добавлен скрипт `scripts/process_openface_csv_to_excel.py` для объединения CSV из
-`processed openface/actor` и `processed openface/respondent` в один файл Excel.
+1. переменную окружения `OPENFACE_EXE`;
+2. `FeatureExtraction.exe` в текущей папке;
+3. `~/Desktop/OpenFace_2.2.0_win_x64/FeatureExtraction.exe`;
+4. `~/Рабочий стол/OpenFace_2.2.0_win_x64/FeatureExtraction.exe`.
 
-Пример запуска:
+## 3) Экспорт CSV OpenFace в единый Excel
+
+Скрипт `3_process_openface_csv_to_excel.py` объединяет CSV в Excel-файл
+(по умолчанию `openface_processed.xlsx`).
+
+### Базовый запуск
 
 ```bash
-python scripts/process_openface_csv_to_excel.py
+python 3_process_openface_csv_to_excel.py
 ```
 
-Опциональные параметры:
+### Полезные параметры
 
 ```bash
-python scripts/process_openface_csv_to_excel.py --mode actor
-python scripts/process_openface_csv_to_excel.py --mode respondent --respondent Иванов
-python scripts/process_openface_csv_to_excel.py --input-root "processed openface" --output openface_processed.xlsx
-python scripts/process_openface_csv_to_excel.py --no-gui
+python 3_process_openface_csv_to_excel.py --mode actor
+python 3_process_openface_csv_to_excel.py --mode respondent --respondent Иванов
+python 3_process_openface_csv_to_excel.py --input-root processed_openface --output openface_processed.xlsx
+python 3_process_openface_csv_to_excel.py --no-gui
 ```
 
-По умолчанию выбор режима и респондента открывается в отдельном GUI-меню. Во время обработки
-в консоли отображается прогресс-бар по файлам.
+### Что добавляется в Excel
+
+- служебные колонки (`frame`, `face_id`, `timestamp`, `confidence`, `success`) если они есть;
+- колонки AU из списка `TARGET_AUS` (`*_r`, `*_c`);
+- подсветка:
+  - `*_c != 0`;
+  - `*_r > 0.6`;
+  - AU-колонок, значимых для распознанной эмоции в имени файла.
+
+## Быстрая проверка скриптов
+
+```bash
+python -m py_compile 1_experiment_run.py 2_processing_open_face.py 3_process_openface_csv_to_excel.py
+python 2_processing_open_face.py --help
+python 3_process_openface_csv_to_excel.py --help
+```
