@@ -79,3 +79,27 @@ python scripts/process_actor.py --mode respondent ^
 python scripts/process_actor.py --mode actor --dry-run
 python scripts/process_actor.py --mode respondent --dry-run
 ```
+
+
+## Экспорт CSV OpenFace в единый Excel
+
+Добавлен скрипт `scripts/process_openface_csv_to_excel.py` для объединения CSV из
+`processed openface/actor` и `processed openface/respondent` в один файл Excel.
+
+Пример запуска:
+
+```bash
+python scripts/process_openface_csv_to_excel.py
+```
+
+Опциональные параметры:
+
+```bash
+python scripts/process_openface_csv_to_excel.py --mode actor
+python scripts/process_openface_csv_to_excel.py --mode respondent --respondent Иванов
+python scripts/process_openface_csv_to_excel.py --input-root "processed openface" --output openface_processed.xlsx
+python scripts/process_openface_csv_to_excel.py --no-gui
+```
+
+По умолчанию выбор режима и респондента открывается в отдельном GUI-меню. Во время обработки
+в консоли отображается прогресс-бар по файлам.
