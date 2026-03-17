@@ -83,7 +83,7 @@ EMOTIONS: dict[str, dict[str, Any]] = {
         "title": "удивление",
         "actor_sheet": "удивление_actor_actor",
         "aus": ["AU01_r", "AU02_r", "AU05_r", "AU26_r"],
-        "anchor_frames": [1829, 1271, 1028],
+        "anchor_frames": [1829, 1271],
         "respondent_range": (5269, 7500),
     },
 }
